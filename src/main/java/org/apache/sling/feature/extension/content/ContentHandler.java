@@ -35,8 +35,6 @@ import org.apache.sling.feature.Configuration;
 import org.apache.sling.feature.Extension;
 import org.apache.sling.feature.ExtensionType;
 import org.apache.sling.feature.FeatureConstants;
-import org.apache.sling.feature.io.ArtifactManager;
-import org.apache.sling.feature.io.ArtifactManagerConfig;
 import org.apache.sling.feature.launcher.spi.LauncherPrepareContext;
 import org.apache.sling.feature.launcher.spi.extensions.ExtensionHandler;
 import org.apache.sling.feature.launcher.spi.extensions.ExtensionInstallationContext;
@@ -45,17 +43,16 @@ public class ContentHandler implements ExtensionHandler {
 
     private static final String REPO_HOME = "launcher/repository/";
 
-    private static final String REGISTRY_FOLDER = "packageregistry2";
+    private static final String REGISTRY_FOLDER = "packageregistry";
     
     private static File registryHome = new File(REPO_HOME, REGISTRY_FOLDER);
 
-    private static ExecutionPlanBuilder buildExecutionPlan(Collection<Artifact> artifacts) throws Exception {
+    private static ExecutionPlanBuilder buildExecutionPlan(Collection<Artifact> artifacts, LauncherPrepareContext prepareContext) throws Exception {
 
-        ArtifactManager am = ArtifactManager.getArtifactManager(new ArtifactManagerConfig());
         List<File> packageReferences = new ArrayList<File>();
 
         for (final Artifact a : artifacts) {
-            final File file = am.getArtifactHandler(a.getId().toMvnUrl()).getFile();
+            final File file = prepareContext.getArtifactFile(a.getId());
             if (file.exists()) {
                 packageReferences.add(file);
             }
@@ -101,10 +98,10 @@ public class ContentHandler implements ExtensionHandler {
             for (Object key : orderedArtifacts.keySet()) {
                 @SuppressWarnings("unchecked")
                 Collection<Artifact> artifacts = orderedArtifacts.getCollection(key);
-                ExecutionPlanBuilder builder = buildExecutionPlan(artifacts);
+                ExecutionPlanBuilder builder = buildExecutionPlan(artifacts, prepareContext);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 builder.save(baos);
-                executionPlans.add(baos.toString());
+                executionPlans.add(baos.toString("UTF-8"));
             }
             final Configuration initcfg = new Configuration("org.apache.sling.jcr.packageinit.impl.ExecutionPlanRepoInitializer");
             initcfg.getProperties().put("executionplans", executionPlans.toArray(new String[executionPlans.size()]));
